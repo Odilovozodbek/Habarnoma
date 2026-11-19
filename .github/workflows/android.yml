@@ -30,6 +30,18 @@ jobs:
           flutter pub get
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - run: flutter test
+      - name: Download verified Gradle distribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          distribution="$RUNNER_TEMP/gradle-8.14-bin.zip"
+          if ! curl --fail --location --silent --show-error --retry 2 \
+            https://downloads.gradle.org/distributions/gradle-8.14-bin.zip --output "$distribution"; then
+            gh release download v8.14.0 --repo gradle/gradle-distributions \
+              --pattern gradle-8.14-bin.zip --output "$distribution" --clobber
+          fi
+          echo "61ad310d3c7d3e5da131b76bbf22b5a4c0786e9d892dae8c1658d4b484de3caa  $distribution" | sha256sum --check
+          sed -i "s|^distributionUrl=.*|distributionUrl=file://$distribution|" android/gradle/wrapper/gradle-wrapper.properties
       - name: Build and verify APK
         run: |
           flutter build apk --debug
