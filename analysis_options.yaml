@@ -1,0 +1,4 @@
+# This project uses Flutter's analyzer without extra lint dependencies.
+analyzer:
+  exclude:
+    - build/**
