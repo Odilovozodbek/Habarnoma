@@ -1,0 +1,23 @@
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+// Hosted runners share Maven Central's per-IP quota. Use Google's public mirror.
+def centralMirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+def redirectCentral = { repo ->
+    if (repo instanceof MavenArtifactRepository && repo.url?.host == 'repo.maven.apache.org') {
+        repo.setUrl(centralMirror)
+    }
+}
+
+gradle.beforeSettings { settings ->
+    settings.pluginManagement.repositories {
+        maven { url = centralMirror }
+        google()
+        gradlePluginPortal()
+    }
+    settings.dependencyResolutionManagement.repositories.all(redirectCentral)
+}
+
+gradle.beforeProject { project ->
+    project.buildscript.repositories.all(redirectCentral)
+    project.repositories.all(redirectCentral)
+}

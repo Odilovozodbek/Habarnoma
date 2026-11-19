@@ -30,6 +30,8 @@ jobs:
           flutter pub get
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - run: flutter test
+      - name: Configure Maven Central mirror for the runner
+        run: install -Dm644 .github/gradle-ci.init.gradle "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/habarnoma.gradle"
       - name: Download verified Gradle distribution
         env:
           GH_TOKEN: ${{ github.token }}
