@@ -19,7 +19,7 @@ os.chdir(Path(__file__).resolve().parent)
 os.umask(0o077)
 load_dotenv()
 CATEGORIES={
- 'hakaton':('hakaton','hackathon','хакатон'), 'tanlov':('tanlov','конкурс'),
+ 'dars':('dars','imtihon','расписание',"mashg'ulot"), 'hakaton':('hakaton','hackathon','хакатон'), 'tanlov':('tanlov','конкурс'),
  'musobaqa':('musobaqa','olimpiada','олимпиада'),
  'tadbir':('tadbir','seminar','konferensiya','trening','uchrashuv'),
  'grant':('grant','stipendiya'), 'universitet':('universitet','talaba'),
@@ -31,7 +31,7 @@ def classify(text):
     past=any(w in t for w in ("bo'lib o'tdi",'yakunlandi',"g'oliblar",'состоялся'))
     category=next((k for k,words in CATEGORIES.items() if any(w in t for w in words)),None)
     if past and not future:return None
-    return category if category=='universitet' or future else None
+    return category if category in ('universitet','dars') or future else None
 
 def connect():
     db=sqlite3.connect('havola.db');db.row_factory=sqlite3.Row

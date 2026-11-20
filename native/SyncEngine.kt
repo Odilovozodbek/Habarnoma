@@ -29,18 +29,29 @@ object SyncEngine {
             return connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } finally { connection.disconnect() }
     }
+    fun combined(context: Context): String {
+        val remote = JSONArray(context.getSharedPreferences("havola",Context.MODE_PRIVATE).getString("events","[]"))
+        val items = PublicSources.events(context)
+        for (i in 0 until remote.length()) items.put(Bulletins.enrich(remote.getJSONObject(i)))
+        return items.toString()
+    }
     @Synchronized fun sync(context: Context): String {
         val prefs=context.getSharedPreferences("havola",Context.MODE_PRIVATE)
         val config=JSONObject(prefs.getString("config","{}")!!)
         var cursor=prefs.getLong("cursor",0)
         val cache=JSONArray(prefs.getString("events","[]"))
         val fresh=mutableListOf<JSONObject>()
+        fresh.addAll(PublicSources.refresh(context))
         // Bounded catch-up, next periodic run continues from the saved cursor.
         for(page in 0 until 5) {
-            val batch=JSONArray(request(context,"/events?after=$cursor"))
+            if(config.optString("url").isBlank()) break
+            val batch = try { JSONArray(request(context,"/events?after=$cursor")) } catch(e: Exception) {
+                if (PublicSources.sources(context).length()==0) throw e
+                break
+            }
             if(batch.length()==0) break
             for(i in 0 until batch.length()) {
-                val event=batch.getJSONObject(i)
+                val event=Bulletins.enrich(batch.getJSONObject(i))
                 val id=event.getLong("id")
                 if(id>cursor) { cache.put(event); fresh.add(event);cursor=id }
             }
@@ -49,25 +60,33 @@ object SyncEngine {
             for(i in maxOf(0,cache.length()-1000) until cache.length()) kept.put(cache.getJSONObject(i))
             prefs.edit().putLong("cursor",cursor).putString("events",kept.toString()).apply()
         }
-        for(event in fresh) {
-            try { notify(context,(event.getLong("id")%Int.MAX_VALUE).toInt(),"Havola • "+event.optString("category"),event.optString("text").take(300),config.optBoolean("sound",true)) } catch(_: Exception) { /* Cache still contains the unread announcement. */ }
+        val selected = config.optString("category","all")
+        val relevant = fresh.filter { selected == "all" || it.optString("category") == selected }
+        for(event in relevant) {
+            try { notify(context,(event.getLong("id")%Int.MAX_VALUE).toInt(),"Habarnoma • "+event.optString("category"),event.optString("summary").take(460),config.optBoolean("sound",true)) } catch(_: Exception) { /* Cache still contains the unread announcement. */ }
         }
-        spokenPending=if(fresh.isEmpty()) "" else fresh.takeLast(3).joinToString(". ") { it.optString("text").take(500) }
-        return prefs.getString("events","[]")!!
+        spokenPending=if(relevant.isEmpty()) "" else relevant.takeLast(3).joinToString(". ") { it.optString("summary").take(500) }
+        return combined(context)
     }
     fun notify(context: Context,id: Int,title: String,text: String,sound: Boolean) {
         val manager=context.getSystemService(NotificationManager::class.java)
         check(manager.areNotificationsEnabled()) { "Telefon sozlamalarida bildirishnomaga ruxsat bering." }
-        val channelId=if(sound) "havola_sound_v1" else "havola_silent_v1"
+        val custom = context.getSharedPreferences("havola",Context.MODE_PRIVATE).getString("musicUri",null)
+        val tone = custom?.let { android.net.Uri.parse(it) } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val channelId = when {
+            !sound -> "havola_silent_v1"
+            custom == null -> "havola_sound_v1"
+            else -> "music_" + java.util.UUID.nameUUIDFromBytes(custom.toByteArray())
+        }
         if(Build.VERSION.SDK_INT>=26) {
             val channel=NotificationChannel(channelId,if(sound) "Ovozli e’lonlar" else "Ovozsiz e’lonlar",NotificationManager.IMPORTANCE_DEFAULT)
-            if(sound) channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build()) else channel.setSound(null,null)
+            if(sound) channel.setSound(tone,AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build()) else channel.setSound(null,null)
             manager.createNotificationChannel(channel)
         }
         val pending=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder=if(Build.VERSION.SDK_INT>=26) Notification.Builder(context,channelId) else Notification.Builder(context)
         builder.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(title).setContentText(text).setStyle(Notification.BigTextStyle().bigText(text)).setContentIntent(pending).setAutoCancel(true)
-        if(Build.VERSION.SDK_INT<26 && sound) builder.setDefaults(Notification.DEFAULT_SOUND)
+        if(Build.VERSION.SDK_INT<26 && sound) builder.setSound(tone)
         manager.notify(id,builder.build())
     }
 }

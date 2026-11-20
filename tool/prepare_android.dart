@@ -17,7 +17,7 @@ void prepare() {
   if (!file('pubspec.yaml').existsSync() || !manifest.existsSync()) {
     throw StateError('CMDni havola_flutter papkasida oching. Avval flutter create buyrugi tugagan bolishi kerak.');
   }
-  final inputs = ['MainActivity.kt', 'SyncEngine.kt'];
+  final inputs = ['MainActivity.kt', 'SyncEngine.kt', 'PublicSources.kt', 'Bulletins.kt'];
   for (final name in inputs) {
     if (!file('native/$name').existsSync()) {
       throw StateError('native/$name topilmadi. Loyihaning native papkasi kerak.');
@@ -47,7 +47,7 @@ void prepare() {
   if (!text.contains('android:allowBackup=')) {
     text = text.replaceFirst('<application', '<application android:allowBackup="false"');
   }
-  if (!text.contains('android:name=".SyncJob"')) {
+  if (!text.contains('SyncJob"')) {
     text = text.replaceFirst('</application>', '<service android:name=".SyncJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />\n    </application>');
   }
   if (!text.contains('android.intent.action.TTS_SERVICE')) {
@@ -58,6 +58,22 @@ void prepare() {
       text = text.replaceFirst('</manifest>', '<queries>$intent</queries>\n</manifest>');
     }
   }
+  final icon = file('android/app/src/main/res/drawable-nodpi/habarnoma.webp');
+  icon.parent.createSync(recursive: true);
+  file('native/res/drawable-nodpi/habarnoma.webp').copySync(icon.path);
+  text = text.replaceAll('@mipmap/ic_launcher', '@drawable/habarnoma');
+  final parserTest = file('android/app/src/test/kotlin/uz/havola/havola/PublicSourcesTest.kt');
+  parserTest.parent.createSync(recursive: true);
+  file('test/PublicSourcesTest.kt').copySync(parserTest.path);
+  final build = file('android/app/build.gradle.kts');
+  var gradle = build.readAsStringSync();
+  if (!gradle.contains('org.jsoup:jsoup:')) {
+    gradle += '\ndependencies { implementation("org.jsoup:jsoup:1.18.3"); testImplementation("junit:junit:4.13.2"); testImplementation("org.json:json:20240303") }\n';
+  }
+  // Install alongside the earlier APK, whose temporary signing key is unavailable.
+  gradle = gradle.replaceAll('applicationId = "uz.havola.havola"', 'applicationId = "uz.habarnoma.mobile"');
+  build.writeAsStringSync(gradle);
+  text = text.replaceAll('android:name=".MainActivity"','android:name="uz.havola.havola.MainActivity"').replaceAll('android:name=".SyncJob"','android:name="uz.havola.havola.SyncJob"');
   manifest.writeAsStringSync(text);
   stdout.writeln('TAYYOR: Android ovoz va bildirishnoma kodlari ulandi.');
   stdout.writeln('Keyingi buyruq: flutter build apk --debug');

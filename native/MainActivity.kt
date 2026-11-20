@@ -16,6 +16,38 @@ import java.util.Locale
 class MainActivity: FlutterActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var musicResult: MethodChannel.Result? = null
+    private fun scheduleSync() {
+        val scheduler = getSystemService(JobScheduler::class.java)
+        val config = JSONObject(getSharedPreferences("havola",MODE_PRIVATE).getString("config","{}")!!)
+        if (config.optString("url").isNotBlank() || PublicSources.sources(this).length() > 0) {
+            scheduler.schedule(JobInfo.Builder(71,ComponentName(this,SyncJob::class.java))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setPeriodic(15*60*1000L).setPersisted(true).build())
+        } else scheduler.cancel(71)
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode,resultCode,data)
+        if (requestCode != 82) return
+        val result = musicResult ?: return
+        musicResult = null
+        val uri = data?.data
+        if (resultCode != RESULT_OK || uri == null) { result.success(null); return }
+        try {
+            contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val name = contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use {
+                if(it.moveToFirst()) it.getString(0) else null
+            } ?: "Tanlangan musiqa"
+            val prefs = getSharedPreferences("havola",MODE_PRIVATE)
+            val old = prefs.getString("musicUri",null)
+            prefs.edit().putString("musicUri",uri.toString()).putString("musicName",name).apply()
+            if(old != null && old != uri.toString()) releaseMusic(old)
+            result.success(name)
+        } catch(e: Exception) { result.error("MUSIC","Musiqa faylini ochib bo‘lmadi.",null) }
+    }
+    private fun releaseMusic(uri: String) {
+        runCatching { contentResolver.releasePersistableUriPermission(android.net.Uri.parse(uri),Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+    }
     private var permissionResult: MethodChannel.Result? = null
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this,this) }
     override fun onInit(status: Int) { ttsReady = status == TextToSpeech.SUCCESS }
@@ -25,7 +57,37 @@ class MainActivity: FlutterActivity(), TextToSpeech.OnInitListener {
             val prefs = getSharedPreferences("havola",Context.MODE_PRIVATE)
             when(call.method) {
                 "read" -> result.success(prefs.getString("config","{}"))
-                "cached" -> result.success(prefs.getString("events","[]"))
+                "cached" -> result.success(SyncEngine.combined(this))
+                "localSources" -> result.success(PublicSources.sources(this).toString())
+                "openPost" -> try {
+                    val link = android.net.Uri.parse(call.argument<String>("url"))
+                    require(link.scheme in listOf("https","http") && !link.host.isNullOrBlank())
+                    startActivity(Intent(Intent.ACTION_VIEW,link))
+                    result.success(null)
+                } catch(e: Exception) { result.error("LINK","Havolani ochib bo‘lmadi.",null) }
+                "musicName" -> result.success(prefs.getString("musicName","Telefonning standart signali"))
+                "resetMusic" -> {
+                    prefs.getString("musicUri",null)?.let { releaseMusic(it) }
+                    prefs.edit().remove("musicUri").remove("musicName").apply()
+                    result.success(null)
+                }
+                "pickMusic" -> {
+                    if (musicResult != null) { result.error("BUSY","Fayl tanlash oynasi ochiq.",null) }
+                    else try {
+                        musicResult = result
+                        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType("audio/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),82)
+                    } catch(e: Exception) { musicResult=null; result.error("MUSIC","Fayl tanlash oynasini ochib bo‘lmadi.",null) }
+                }
+                "addLocal", "removeLocal" -> Thread {
+                    try {
+                        val link = call.argument<String>("url")!!
+                        if(call.method=="addLocal") PublicSources.add(this,link,call.argument<String>("filter") ?: "all")
+                        else PublicSources.remove(this,link)
+                        scheduleSync()
+                        runOnUiThread { result.success(null) }
+                    } catch(e: Exception) { runOnUiThread { result.error("SOURCE",e.message,null) } }
+                }.start()
                 "configure" -> {
                     val raw = call.argument<String>("json") ?: "{}"
                     val config = JSONObject(raw)
@@ -34,12 +96,7 @@ class MainActivity: FlutterActivity(), TextToSpeech.OnInitListener {
                         prefs.edit().remove("cursor").remove("events").apply()
                     }
                     prefs.edit().putString("config",raw).apply()
-                    val scheduler = getSystemService(JobScheduler::class.java)
-                    if(config.optString("url").isNotBlank()) {
-                        scheduler.schedule(JobInfo.Builder(71,ComponentName(this,SyncJob::class.java))
-                            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                            .setPeriodic(15*60*1000L).setPersisted(true).build())
-                    } else scheduler.cancel(71)
+                    scheduleSync()
                     result.success(null)
                 }
                 "permission" -> {

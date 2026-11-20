@@ -8,25 +8,17 @@ Havola loyihasining Flutter ilovasi va Telegram kanallaridagi e’lonlarni kuzat
 2. Yashil belgi qo‘yilgan oxirgi yig‘ishni oching.
 3. Sahifaning pastidagi **Artifacts** bo‘limida **Habarnoma.apk** faylini bosing. Yuklangan APK faylini Android telefonda oching.
 
-`main` tarmog‘iga kod yuklanganda GitHub APK’ni avtomatik yig‘adi. Shu sahifadagi **Run workflow** orqali ham yig‘ishni boshlash mumkin. Bu shaxsiy sinov uchun debug APK. Jonli e’lonlar uchun ilova sozlamalarida quyida ko‘rsatilgan Telegram serverini ulang.
+`main` tarmog‘iga kod yuklanganda GitHub APK’ni avtomatik yig‘adi. Shu sahifadagi **Run workflow** orqali ham yig‘ishni boshlash mumkin. Bu shaxsiy sinov uchun debug APK.
 
-## Mavjud funksiyalar
+## 0.3 versiyasidan foydalanish
 
-- Flutter Material 3 qorong‘i interfeys: katalog, bo‘limlar, qidiruv, saqlash, manbalar, sozlamalar.
-- Android bildirishnomasi va standart signal, ovozli/ovozsiz alohida kanallar, ruxsat so‘rovi.
-- Matnni o‘zbekcha o‘qish (Android TextToSpeech). Telefonda uz-UZ ovozi bo‘lmasa aniq xato ko‘rsatiladi; boshqa tilda yashirin o‘qimaydi.
-- Ovoz/signalni tekshirish tugmalari katalogga sinov e’loni qo‘shmaydi.
-- Ilova ochiq paytda yangi e’lon uchun avtomatik ovozda o‘qish (yoqilganda).
-- Ilova fonida JobScheduler taxminan 15 daqiqalik tekshirish va bildirishnoma. Bu darhol push emas: batareya, Doze va force-stop uni kechiktirishi/to‘xtatishi mumkin. Fon rejimida matn ovozda o‘qilmaydi; standart signal bor.
-- Server haqiqiy Telegram xabarlarini olib keladi, kalit so‘zlar bilan saralaydi, bir xil matnni takror yubormaydi. Serverga ruxsatli kuzatuvchi akkaunt kerak; botni kanalga qo‘shish talab qilinmaydi.
+**Manbalar → Sayt yoki Telegram qo‘shish** oynasiga ochiq kanal, sayt yoki RSS/Atom havolasini kiriting. Telefon ochiq Telegram kanallarining veb-ko‘rinishini, saytning yangiliklar tasmasini yoki sahifa matnini o‘qiydi. Manba ilk bor tekshirilganda mavjud xabarlar katalogga tushadi. Keyingi yangi xabarlar bildirishnoma beradi. Rasm ichidagi jadvallar va kirish talab qiladigan sahifalar uchun matnli ochiq manba kerak.
 
-## Holat va chegaralar
+Katalogning yuqori menyusida **Dars vaqtlari**, **Tanlovlar** yoki boshqa toifani tanlang. Tanlov bildirishnomalarga ham qo‘llanadi. Xulosada e’lonning muhim jumlalari, matnda berilgan sana va vaqt ko‘rsatiladi. **Batafsil → Manbani ochish** asl e’longa olib boradi.
 
-GitHub Actions ilova kodini tahlil qiladi, Flutter testlarini ishga tushiradi va tayyor APK imzosini tekshiradi. Ovoz telefonning TTS sozlamalariga bog‘liq.
+**Sozlamalar → Musiqa tanlash** telefondagi audio faylni bildirishnoma tovushi sifatida belgilaydi. Natijani **Signalni tekshirish** orqali eshiting. Fondagi tekshiruv Android ruxsatlari va batareya sozlamalariga bog‘liq. Shaxsiy Telegram serverini ham sozlamalar orqali ulash mumkin.
 
-Server va Telegram sessiyasi bu paketda ulanmagan. Server ulanmaguncha hech qanday jonli e’lon kelmaydi. AI hali qo‘shilmagan: OpenAI kaliti alohida xavfsiz server sozlamasida kerak bo‘ladi. Ovozli o‘qish AI kalitisiz, telefonning TTS tizimi orqali ishlaydi.
-
-Rasmdagi matn/OCR, aniq muddatlar/kalendar, tahrirlarni kuzatish, semantik takrorlar va iOS bildirishnomalari bu versiyada yo‘q. Oldingi xabarlar manba birinchi qo‘shilganda tashlanadi, keyingi matnli postlar kuzatiladi. Saralash xato qilishi mumkin; asl e’lon havolasi kartochkada.
+0.3 versiyasi avvalgi sinov APK’si bilan yonma-yon o‘rnatiladi. Manbalar va sozlamalar har bir nusxada alohida saqlanadi.
 
 ## Android ishga tushirish
 

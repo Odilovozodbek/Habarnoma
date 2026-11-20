@@ -47,6 +47,7 @@ jobs:
       - name: Build and verify APK
         run: |
           flutter build apk --debug
+          (cd android && ./gradlew :app:testDebugUnitTest)
           mv build/app/outputs/flutter-apk/app-debug.apk build/Habarnoma.apk
           signer=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
           "$signer" verify --verbose build/Habarnoma.apk
