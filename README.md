@@ -70,3 +70,7 @@ python -m unittest -v
 Flutter testi havola validatsiyasini, Python testi saralashni tekshiradi. `tool/prepare.py` qayta bajarishga mos.
 
 Manbalar: https://docs.flutter.dev/platform-integration/platform-channels va https://developer.android.com/develop/ui/views/notifications/channels
+
+## Loyiha sinxronizatsiyasi
+
+Turli AI va guruhlardagi ishlarni bitta loyiha ostida jamlash, umumiy davom ettirish promptini olish va katta ZIP’larni ajratish uchun [Habarnoma Sinxron](sync/README.md) qo‘shildi. [Oflayn HTML dastur](sync/Habarnoma_Sinxron.html) kompyuter brauzerida ochiladi.
